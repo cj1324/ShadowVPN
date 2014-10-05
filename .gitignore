@@ -15,6 +15,7 @@
 .dirstamp
 .done
 .libs
+.build
 build
 Makefile
 CMakeFiles
