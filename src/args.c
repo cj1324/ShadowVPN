@@ -40,16 +40,16 @@ static const char *help_message =
 "\n"
 "Online help: <https://github.com/clowwindy/ShadowVPN>\n";
 
-static void print_help() __attribute__ ((noreturn));
+static void print_help(int code) __attribute__ ((noreturn));
 
 static void load_default_args(shadowvpn_args_t *args);
 
 static int process_key_value(shadowvpn_args_t *args, const char *key,
                       const char *value);
 
-static void print_help() {
+static void print_help(int code) {
   printf("%s", help_message);
-  exit(1);
+  exit(code);
 }
 
 static int parse_config_file(shadowvpn_args_t *args, const char *filename) {
@@ -186,7 +186,7 @@ int args_parse(shadowvpn_args_t *args, int argc, char **argv) {
           args->cmd = SHADOWVPN_CMD_RESTART;
         else {
           errf("unknown command %s", optarg);
-          print_help();
+          print_help(EXIT_FAILURE);
          }
         break;
       case 'c':
@@ -195,12 +195,13 @@ int args_parse(shadowvpn_args_t *args, int argc, char **argv) {
       case 'v':
         verbose_mode = 1;
         break;
-       default:
-        print_help();
+      case 'h':
+        print_help(EXIT_SUCCESS);
+        break;
     }
   }
   if (!args->conf_file)
-    print_help();
+    print_help(EXIT_FAILURE);
   load_default_args(args);
   return parse_config_file(args, args->conf_file);
 }
