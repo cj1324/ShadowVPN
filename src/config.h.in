@@ -1,0 +1,2 @@
+
+#cmakedefine WITH_DEBUG ${WITH_DEBUG}
