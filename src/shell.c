@@ -58,9 +58,9 @@ int ifconfig(shadowvpn_args_t *args, int is_up) {
 #endif
 
 #ifdef TARGET_LINUX
-    snprintf(buf, buf_len, "%s %s %s netmask %s mtu %d",
-            base, args->intf, args->tun_local_ip, args->tun_netmask,
-            args->mtu);
+    snprintf(buf, buf_len, "%s %s %s dstaddr %s netmask %s mtu %d",
+            base, args->intf, args->tun_local_ip, args->tun_remote_ip,
+            args->tun_netmask, args->mtu);
 #endif
 
 #ifdef TARGET_WIN32
@@ -71,7 +71,7 @@ int ifconfig(shadowvpn_args_t *args, int is_up) {
 #ifdef TARGET_WIN32
  /* TODO */
 #else
-    snprintf(buf, buf_len, "%s %s down", (char *)&base, args->intf);
+    snprintf(buf, buf_len, "%s %s down", base, args->intf);
 #endif
   }
   r =  command_run(buf, strlen(buf));
@@ -96,12 +96,12 @@ static int shell_run(shadowvpn_args_t *args, int is_up) {
 static int command_run(const char *command, size_t len) {
   char *buf;
   int r;
-
-  buf = malloc(len + 8);
+  size_t buf_len = len - (len % 4) + 16; // Optimized length, 4 * N
+  buf = malloc(buf_len);
 #ifdef TARGET_WIN32
-  sprintf(buf, "cmd /c %s", command);
+  snprintf(buf, buf_len,  "cmd /c %s", command);
 #else
-  sprintf(buf, "sh -c '%s'", command);
+  snprintf(buf, buf_len, "sh -c '%s'", command);
 #endif
   logf("executing %s", command);
   if (0 != (r = system(buf))) {

@@ -193,7 +193,7 @@ static void load_default_args(shadowvpn_args_t *args) {
 #endif
   args->tun_local_ip = "10.7.0.1";
   args->tun_remote_ip = "10.7.0.1";  /* server mode equal tun_local_ip */
-  args->tun_netmask = "255.255.255.254";
+  args->tun_netmask = "255.255.255.0";
   args->mtu = 1440;
   args->pid_file = "/var/run/shadowvpn.pid";
   args->log_file = "/var/log/shadowvpn.log";
