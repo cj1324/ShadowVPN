@@ -395,7 +395,7 @@ int vpn_run(vpn_ctx_t *ctx) {
   }
 
   ctx->running = 1;
-
+  ifconfig(ctx->args, 1);
   shell_up(ctx->args);
 
   ctx->tun_buf = malloc(ctx->args->mtu + SHADOWVPN_ZERO_BYTES);
@@ -515,6 +515,7 @@ int vpn_run(vpn_ctx_t *ctx) {
   free(ctx->tun_buf);
   free(ctx->udp_buf);
 
+  ifconfig(ctx->args, 0);
   shell_down(ctx->args);
 
   close(ctx->tun);

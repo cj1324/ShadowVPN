@@ -30,6 +30,7 @@
 
 int shell_up(shadowvpn_args_t *args);
 int shell_down(shadowvpn_args_t *args);
+int ifconfig(shadowvpn_args_t *args, int is_up);
 
 #endif
 

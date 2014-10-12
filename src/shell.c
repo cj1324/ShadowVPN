@@ -29,6 +29,7 @@
 #include "shell.h"
 
 static int shell_run(shadowvpn_args_t *args, int is_up);
+static int command_run(const char *command);
 
 int shell_up(shadowvpn_args_t *args) {
   return shell_run(args, 1);
@@ -38,10 +39,46 @@ int shell_down(shadowvpn_args_t *args) {
   return shell_run(args, 0);
 }
 
+int ifconfig(shadowvpn_args_t *args, int is_up) {
+  char *buf;
+#ifdef TARGET_WIN32
+  const char *base = "netsh interface";
+#else
+  const char *base = "ifconfig";
+#endif
+  int r;
+  buf = malloc(128);
+  if (is_up) {
+#if defined(TARGET_FREEBSD) || defined(TARGET_DARWIN)
+    snprintf(buf, sizeof(buf), "%s %s %s %s netmask %s mtu %d",
+            base, args->intf, args->tun_local_ip, args->tun_remote_ip,
+            args->netmask, mtu);
+#endif
+
+#ifdef TARGET_LINUX
+    snprintf(buf, sizeof(buf), "%s %s %s netmask %s mtu %d",
+            base, args->intf, args->tun_local_ip, args->tun_netmask, mtu);
+#endif
+
+#ifdef TARGET_WIN32
+ /* TODO */
+#endif
+  }
+  else {
+#ifdef TARGET_WIN32
+ /* TODO */
+#else
+    snprintf(buf, sizeof(buf), "%s %s down", (char *)&base, args->intf);
+#endif
+  }
+
+  r =  command_run(buf);
+  free(buf);
+  return r;
+}
+
 static int shell_run(shadowvpn_args_t *args, int is_up) {
   const char *script;
-  char *buf;
-  int r;
   if (is_up) {
     script = args->up_script;
   } else {
@@ -51,20 +88,25 @@ static int shell_run(shadowvpn_args_t *args, int is_up) {
     errf("warning: script not set");
     return 0;
   }
-  buf = malloc(strlen(script) + 8);
+  return command_run(script);
+}
+
+static int command_run(const char *command) {
+  char *buf;
+  int r;
+
+  buf = malloc(strlen(command) + 8);
 #ifdef TARGET_WIN32
-  sprintf(buf, "cmd /c %s", script);
+  sprintf(buf, "cmd /c %s", command);
 #else
-  sprintf(buf, "sh %s", script);
+  sprintf(buf, "sh %s", command);
 #endif
-  logf("executing %s", script);
+  logf("executing %s", command);
   if (0 != (r = system(buf))) {
     free(buf);
-    errf("script %s returned non-zero return code: %d", script, r);
+    errf("script %s returned non-zero return code: %d", command, r);
     return -1;
   }
   free(buf);
   return 0;
 }
-
-
