@@ -7,16 +7,13 @@
 # as environment variables, except password
 
 # user-defined variables
-local_tun_ip=10.7.0.2
-remote_tun_ip=10.7.0.1
+local_tun_ip=$tun_local_ip
+remote_tun_ip=$tun_remote_ip
 dns_server=8.8.8.8
 
 # get current gateway
 orig_gw=$(netstat -nr | grep --color=never '^default' | grep -v 'utun' | sed 's/default *\([0-9\.]*\) .*/\1/' | head -1)
 route add -net $server $orig_gw
-
-# configure IP address and MTU of VPN interface
-ifconfig $intf $local_tun_ip $remote_tun_ip mtu $mtu netmask 255.255.255.0 up
 
 # change routing table
 echo changing default route

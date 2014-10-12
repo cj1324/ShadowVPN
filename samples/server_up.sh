@@ -9,10 +9,6 @@
 # turn on IP forwarding
 sysctl -w net.ipv4.ip_forward=1
 
-# configure IP address and MTU of VPN interface
-ifconfig $intf 10.7.0.1 netmask 255.255.255.0
-ifconfig $intf mtu $mtu
-
 # turn on NAT over eth0 and VPN
 # if you use other interface name that eth0, replace eth0 with it
 iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE

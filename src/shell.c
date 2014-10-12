@@ -29,7 +29,7 @@
 #include "shell.h"
 
 static int shell_run(shadowvpn_args_t *args, int is_up);
-static int command_run(const char *command);
+static int command_run(const char *command, size_t len);
 
 int shell_up(shadowvpn_args_t *args) {
   return shell_run(args, 1);
@@ -41,38 +41,40 @@ int shell_down(shadowvpn_args_t *args) {
 
 int ifconfig(shadowvpn_args_t *args, int is_up) {
   char *buf;
+  size_t buf_len = 128;
+  int r;
 #ifdef TARGET_WIN32
   const char *base = "netsh interface";
 #else
   const char *base = "ifconfig";
 #endif
-  int r;
-  buf = malloc(128);
+
+  buf = malloc(buf_len);
   if (is_up) {
 #if defined(TARGET_FREEBSD) || defined(TARGET_DARWIN)
-    snprintf(buf, sizeof(buf), "%s %s %s %s netmask %s mtu %d",
+    snprintf(buf, buf_len, "%s %s %s %s netmask %s mtu %d",
             base, args->intf, args->tun_local_ip, args->tun_remote_ip,
-            args->netmask, mtu);
+            args->tun_netmask, args->mtu);
 #endif
 
 #ifdef TARGET_LINUX
-    snprintf(buf, sizeof(buf), "%s %s %s netmask %s mtu %d",
-            base, args->intf, args->tun_local_ip, args->tun_netmask, mtu);
+    snprintf(buf, buf_len, "%s %s %s netmask %s mtu %d",
+            base, args->intf, args->tun_local_ip, args->tun_netmask,
+            args->mtu);
 #endif
 
 #ifdef TARGET_WIN32
  /* TODO */
 #endif
   }
-  else {
+  else {   /* ifconfig down */
 #ifdef TARGET_WIN32
  /* TODO */
 #else
-    snprintf(buf, sizeof(buf), "%s %s down", (char *)&base, args->intf);
+    snprintf(buf, buf_len, "%s %s down", (char *)&base, args->intf);
 #endif
   }
-
-  r =  command_run(buf);
+  r =  command_run(buf, strlen(buf));
   free(buf);
   return r;
 }
@@ -88,18 +90,18 @@ static int shell_run(shadowvpn_args_t *args, int is_up) {
     errf("warning: script not set");
     return 0;
   }
-  return command_run(script);
+  return command_run(script, strlen(script));
 }
 
-static int command_run(const char *command) {
+static int command_run(const char *command, size_t len) {
   char *buf;
   int r;
 
-  buf = malloc(strlen(command) + 8);
+  buf = malloc(len + 8);
 #ifdef TARGET_WIN32
   sprintf(buf, "cmd /c %s", command);
 #else
-  sprintf(buf, "sh %s", command);
+  sprintf(buf, "sh -c '%s'", command);
 #endif
   logf("executing %s", command);
   if (0 != (r = system(buf))) {
