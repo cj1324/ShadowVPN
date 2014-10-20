@@ -69,7 +69,7 @@ static int parse_config_file(shadowvpn_args_t *args, const char *filename) {
     char *sp_pos;
     lineno++;
     sp_pos = strchr(line, '\r');
-    if (sp_pos) *sp_pos = 0;
+    if (sp_pos) *sp_pos = '\n';
     sp_pos = strchr(line, '\n');
     if (sp_pos) {
       *sp_pos = 0;
@@ -108,6 +108,12 @@ static int parse_config_file(shadowvpn_args_t *args, const char *filename) {
     errf("password not set in config file");
     return -1;
   }
+#ifdef TARGET_WIN32
+  if (!args->tun_ip) {
+    errf("tunip not set in config file");
+    return -1;
+  }
+#endif
   return 0;
 }
 
@@ -159,17 +165,35 @@ static int process_key_value(shadowvpn_args_t *args, const char *key,
     args->up_script = strdup(value);
   } else if (strcmp("down", key) == 0) {
     args->down_script = strdup(value);
-  } else {
+  }
+#ifdef TARGET_WIN32
+  else if (strcmp("tunip", key) == 0) {
+    args->tun_ip = strdup(value);
+  } else if (strcmp("tunmask", key) == 0) {
+    args->tun_mask = (int) atol(value);
+  } else if (strcmp("tunport", key) == 0) {
+    args->tun_port = (int) atol(value);
+  }
+#endif
+  else {
     errf("warning: unknown key in config file: %s", key);
   }
   return 0;
 }
 
 static void load_default_args(shadowvpn_args_t *args) {
+#ifdef TARGET_DARWIN
+  args->intf = "utun0";
+#else
   args->intf = "tun0";
-  args->mtu = 1500;
+#endif
+  args->mtu = 1440;
   args->pid_file = "/var/run/shadowvpn.pid";
   args->log_file = "/var/log/shadowvpn.log";
+#ifdef TARGET_WIN32
+  args->tun_mask = 24;
+  args->tun_port = TUN_DELEGATE_PORT;
+#endif
 }
 
 int args_parse(shadowvpn_args_t *args, int argc, char **argv) {

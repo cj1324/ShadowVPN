@@ -29,12 +29,32 @@
 #include <signal.h>
 #include "shadowvpn.h"
 
+static vpn_ctx_t vpn_ctx;
+
+#ifdef TARGET_WIN32
+BOOL WINAPI sig_handler(DWORD signo)
+{
+    switch (signo) {
+      case CTRL_C_EVENT:
+      case CTRL_BREAK_EVENT:
+      case CTRL_CLOSE_EVENT:
+      case CTRL_LOGOFF_EVENT:
+      case CTRL_SHUTDOWN_EVENT:
+        vpn_stop(&vpn_ctx);
+        break;
+      default:
+        break;
+    }
+    return TRUE;
+}
+#else
 static void sig_handler(int signo) {
   if (signo == SIGINT)
     exit(1);  // for gprof
   else
-    stop_vpn();
+    vpn_stop(&vpn_ctx);
 }
+#endif
 
 int main(int argc, char **argv) {
   shadowvpn_args_t args;
@@ -76,8 +96,18 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+#ifdef TARGET_WIN32
+  if (0 == SetConsoleCtrlHandler((PHANDLER_ROUTINE) sig_handler, TRUE)) {
+    errf("can not set control handler");
+    return EXIT_FAILURE;
+  }
+#else
   signal(SIGINT, sig_handler);
   signal(SIGTERM, sig_handler);
+#endif
 
-  return run_vpn(&args);;
+  if (-1 == vpn_ctx_init(&vpn_ctx, &args)) {
+    return EXIT_FAILURE;
+  }
+  return vpn_run(&vpn_ctx);
 }

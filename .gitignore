@@ -10,6 +10,7 @@
 *.status
 *.tar.*
 *~
+*.exe
 .DS_Store
 .deps
 .dirstamp
@@ -23,3 +24,8 @@ ShadowVPN
 CMakeCache.txt
 cmake_install.cmake
 config.h
+compile
+confdefs.h
+config.*
+configure
+dist

@@ -1,5 +1,5 @@
 /**
-  shell.c
+  win32.h
 
   Copyright (c) 2014 clowwindy
 
@@ -23,48 +23,27 @@
 
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include "shadowvpn.h"
-#include "shell.h"
+#ifndef WIN32_H
+#define WIN32_H
 
-static int shell_run(shadowvpn_args_t *args, int is_up);
-
-int shell_up(shadowvpn_args_t *args) {
-  return shell_run(args, 1);
-}
-
-int shell_down(shadowvpn_args_t *args) {
-  return shell_run(args, 0);
-}
-
-static int shell_run(shadowvpn_args_t *args, int is_up) {
-  const char *script;
-  char *buf;
-  int r;
-  if (is_up) {
-    script = args->up_script;
-  } else {
-    script = args->down_script;
-  }
-  if (script == NULL || script[0] == 0) {
-    errf("warning: script not set");
-    return 0;
-  }
-  buf = malloc(strlen(script) + 8);
-#ifdef TARGET_WIN32
-  sprintf(buf, "cmd /c %s", script);
-#else
-  sprintf(buf, "sh %s", script);
+#ifdef _WIN32_WINNT
+#undef _WIN32_WINNT
 #endif
-  logf("executing %s", script);
-  if (0 != (r = system(buf))) {
-    free(buf);
-    errf("script %s returned non-zero return code: %d", script, r);
-    return -1;
-  }
-  free(buf);
-  return 0;
-}
 
+#define _WIN32_WINNT 0x0501
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+
+#define bzero(...) ZeroMemory(__VA_ARGS__)
+#define TUN_DELEGATE_ADDR "127.0.0.1"
+#define TUN_DELEGATE_PORT 55151
+
+extern HANDLE dev_handle;
+
+int tun_open(const char *tun_device, const char *tun_ip, int tun_mask, int tun_port);
+int setenv(const char *name, const char *value, int overwrite);
+int disable_reset_report(int fd);
+
+#endif
