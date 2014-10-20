@@ -1,2 +1,10 @@
 
 #cmakedefine WITH_DEBUG ${WITH_DEBUG}
+
+#cmakedefine TARGET_LINUX ${TARGET_LINUX}
+
+#cmakedefine TARGET_DARWIN ${TARGET_DARWIN}
+
+#cmakedefine TARGET_FREEBSD ${TARGET_FREEBSD}
+
+#cmakedefine TARGET_WIN32 ${TARGET_WIN32}
