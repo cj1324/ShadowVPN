@@ -56,6 +56,7 @@
 #endif
 
 #ifdef TARGET_FREEBSD
+#include <net/if.h>
 #include <net/if_tun.h>
 #endif
 
@@ -385,6 +386,106 @@ int vpn_ctx_init(vpn_ctx_t *ctx, shadowvpn_args_t *args) {
   return 0;
 }
 
+int ifconfig_up(const char *devname,
+                struct in_addr *addr,
+                struct in_addr *dstaddr,
+                struct in_addr *netmask) {
+#if defined(TARGET_LINUX)
+  struct ifreq ifr;
+  bzero(&ifr, sizeof(ifr));
+#elif defined(TARGET_DARWIN) || defined (TARGET_FREEBSD)
+  struct ifaliasreq      areq;
+  bzero(&areq, sizeof(areq));
+#endif
+
+  int fd;
+  /* Create a channel to the NET kernel. */
+  if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+    err("socket");
+    errf("can not open socket");
+    return -1;
+  }
+#if defined(TARGET_DARWIN) || defined (TARGET_FREEBSD)
+  strncpy(areq.ifra_name, devname, IFNAMSIZ);
+  areq.ifra_name[IFNAMSIZ-1] = 0; /* Make sure to terminate */
+  ((struct sockaddr_in*) &areq.ifra_addr)->sin_family = AF_INET;
+  ((struct sockaddr_in*) &areq.ifra_addr)->sin_len = sizeof(areq.ifra_addr);
+  ((struct sockaddr_in*) &areq.ifra_addr)->sin_addr.s_addr = addr->s_addr;
+
+  ((struct sockaddr_in*) &areq.ifra_mask)->sin_family = AF_INET;
+  ((struct sockaddr_in*) &areq.ifra_mask)->sin_len  = sizeof(areq.ifra_mask);
+  ((struct sockaddr_in*) &areq.ifra_mask)->sin_addr.s_addr = netmask->s_addr;
+
+  /* For some reason FreeBSD uses ifra_broadcast for specifying dstaddr */
+  ((struct sockaddr_in*) &areq.ifra_broadaddr)->sin_family = AF_INET;
+  ((struct sockaddr_in*) &areq.ifra_broadaddr)->sin_len =
+    sizeof(areq.ifra_broadaddr);
+  ((struct sockaddr_in*) &areq.ifra_broadaddr)->sin_addr.s_addr =
+    dstaddr->s_addr;
+  if (ioctl(fd, SIOCAIFADDR, (void *) &areq) < 0) {
+    err("ioctl[SIOCSIFADDR]");
+    errf("can not setup tun device: %s", devname);
+    close(fd);
+    return -1;
+  }
+#endif
+
+#if defined(TARGET_LINUX)
+  ifr.ifr_addr.sa_family = AF_INET;
+  ifr.ifr_dstaddr.sa_family = AF_INET;
+
+  ifr.ifr_netmask.sa_family = AF_INET;
+
+
+  strncpy(ifr.ifr_name, devname, IFNAMSIZ);
+  ifr.ifr_name[IFNAMSIZ-1] = 0; /* Make sure to terminate */
+
+  if (addr) { /* Set the interface address */
+    memcpy(&((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr, addr,
+      sizeof(*addr));
+    if (ioctl(fd, SIOCSIFADDR, (void *) &ifr) < 0) {
+      if (errno != EEXIST) {
+        err("ioctl(SIOCSIFADDR)");
+        errf("can not setup tun device: %s", devname);
+        close(fd);
+        return -1;
+      }
+      else {
+        err("ioctl(SIOCSIFADDR): Address already exists");
+        close(fd);
+        return -1;
+      }
+    }
+    if (dstaddr) { /* Set the destination address */
+      memcpy(&((struct sockaddr_in *) &ifr.ifr_dstaddr)->sin_addr,
+        dstaddr, sizeof(*dstaddr));
+      if (ioctl(fd, SIOCSIFDSTADDR, (caddr_t) &ifr) < 0) {
+        err("ioctl(SIOCSIFADDR)");
+        errf("can not setup tun device: %s", devname);
+        close(fd);
+        return -1;
+      }
+    }
+
+    if (netmask) { /* Set the netmask */
+      memcpy(&((struct sockaddr_in *) &ifr.ifr_netmask)->sin_addr, 
+        netmask, sizeof(*netmask));
+
+
+      if (ioctl(fd, SIOCSIFNETMASK, (void *) &ifr) < 0) {
+          err("ioctl(SIOCSIFNETMASK)");
+          errf("can not setup tun device: %s", devname);
+        close(fd);
+        return -1;
+      }
+    }
+  }
+#endif
+  close(fd);
+  return 0;
+}
+
+
 int vpn_run(vpn_ctx_t *ctx) {
   fd_set readset;
   int max_fd;
@@ -395,7 +496,21 @@ int vpn_run(vpn_ctx_t *ctx) {
   }
 
   ctx->running = 1;
-  ifconfig(ctx->args, 1);
+/*   ifconfig(ctx->args, 1);
+ */
+  struct in_addr sa_addr;
+  struct in_addr sa_dstaddr;
+  struct in_addr sa_netmask;
+  int ret = inet_aton("10.0.8.1", &sa_addr);
+  printf("inet_aton addr ret %d \n" , ret);
+  ret = inet_aton("10.0.8.2", &sa_dstaddr);
+  printf("inet_aton dstaddr ret %d \n" , ret);
+  ret = inet_aton("255.255.255.0", &sa_netmask);
+  printf("inet_aton netmask ret %d \n" , ret);
+  ifconfig_up(ctx->args->intf,
+            &sa_addr,
+            &sa_dstaddr,
+            &sa_netmask);
   shell_up(ctx->args);
 
   ctx->tun_buf = malloc(ctx->args->mtu + SHADOWVPN_ZERO_BYTES);
