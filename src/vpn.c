@@ -445,7 +445,7 @@ int ifconfig_up(shadowvpn_args_t *args) {
 
   if (&sa_addr) { /* Set the interface address */
     memcpy(&((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr, &sa_addr,
-      sizeof(*addr));
+      sizeof(sa_addr));
     if (ioctl(fd, SIOCSIFADDR, (void *) &ifr) < 0) {
       if (errno != EEXIST) {
         err("ioctl(SIOCSIFADDR)");
@@ -461,7 +461,7 @@ int ifconfig_up(shadowvpn_args_t *args) {
     }
     if (&dstaddr) { /* Set the destination address */
       memcpy(&((struct sockaddr_in *) &ifr.ifr_dstaddr)->sin_addr,
-        &sa_dstaddr, sizeof(*dstaddr));
+        &sa_dstaddr, sizeof(sa_dstaddr));
       if (ioctl(fd, SIOCSIFDSTADDR, (caddr_t) &ifr) < 0) {
         err("ioctl(SIOCSIFADDR)");
         errf("can not setup tun device: %s", args->intf);
@@ -471,8 +471,8 @@ int ifconfig_up(shadowvpn_args_t *args) {
     }
 
     if (&netmask) { /* Set the netmask */
-      memcpy(&((struct sockaddr_in *) &ifr.ifr_netmask)->sin_addr, 
-        &sa_netmask, sizeof(*netmask));
+      memcpy(&((struct sockaddr_in *) &ifr.ifr_netmask)->sin_addr,
+        &sa_netmask, sizeof(sa_netmask));
 
 
       if (ioctl(fd, SIOCSIFNETMASK, (void *) &ifr) < 0) {
