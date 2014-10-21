@@ -39,46 +39,6 @@ int shell_down(shadowvpn_args_t *args) {
   return shell_run(args, 0);
 }
 
-int ifconfig(shadowvpn_args_t *args, int is_up) {
-  char *buf;
-  size_t buf_len = 128;
-  int r;
-#ifdef TARGET_WIN32
-  const char *base = "netsh interface";
-#else
-  const char *base = "ifconfig";
-#endif
-
-  buf = malloc(buf_len);
-  if (is_up) {
-#if defined(TARGET_FREEBSD) || defined(TARGET_DARWIN)
-    snprintf(buf, buf_len, "%s %s %s %s netmask %s mtu %d",
-            base, args->intf, args->tun_local_ip, args->tun_remote_ip,
-            args->tun_netmask, args->mtu);
-#endif
-
-#ifdef TARGET_LINUX
-    snprintf(buf, buf_len, "%s %s %s dstaddr %s netmask %s mtu %d",
-            base, args->intf, args->tun_local_ip, args->tun_remote_ip,
-            args->tun_netmask, args->mtu);
-#endif
-
-#ifdef TARGET_WIN32
- /* TODO */
-#endif
-  }
-  else {   /* ifconfig down */
-#ifdef TARGET_WIN32
- /* TODO */
-#else
-    snprintf(buf, buf_len, "%s %s down", base, args->intf);
-#endif
-  }
-  r =  command_run(buf, strlen(buf));
-  free(buf);
-  return r;
-}
-
 static int shell_run(shadowvpn_args_t *args, int is_up) {
   const char *script;
   if (is_up) {
