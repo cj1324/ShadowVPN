@@ -459,7 +459,7 @@ int ifconfig_up(shadowvpn_args_t *args) {
         return -1;
       }
     }
-    if (&dstaddr) { /* Set the destination address */
+    if (&sa_dstaddr) { /* Set the destination address */
       memcpy(&((struct sockaddr_in *) &ifr.ifr_dstaddr)->sin_addr,
         &sa_dstaddr, sizeof(sa_dstaddr));
       if (ioctl(fd, SIOCSIFDSTADDR, (caddr_t) &ifr) < 0) {
@@ -470,7 +470,7 @@ int ifconfig_up(shadowvpn_args_t *args) {
       }
     }
 
-    if (&netmask) { /* Set the netmask */
+    if (&sa_netmask) { /* Set the netmask */
       memcpy(&((struct sockaddr_in *) &ifr.ifr_netmask)->sin_addr,
         &sa_netmask, sizeof(sa_netmask));
 
