@@ -57,6 +57,8 @@ typedef struct {
 /* return -1 on error. no need to destroy any resource */
 int vpn_ctx_init(vpn_ctx_t *ctx, shadowvpn_args_t *args);
 
+int ifconfig_up(shadowvpn_args_t *args);
+
 /* return -1 on error. no need to destroy any resource */
 int vpn_run(vpn_ctx_t *ctx);
 

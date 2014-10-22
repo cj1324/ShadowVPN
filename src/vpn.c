@@ -56,6 +56,7 @@
 #endif
 
 #ifdef TARGET_FREEBSD
+#include <net/if.h>
 #include <net/if_tun.h>
 #endif
 
@@ -403,6 +404,110 @@ int vpn_ctx_init(vpn_ctx_t *ctx, shadowvpn_args_t *args) {
   return 0;
 }
 
+int ifconfig_up(shadowvpn_args_t *args) {
+#if defined(TARGET_LINUX)
+  struct ifreq ifr;
+  bzero(&ifr, sizeof(ifr));
+#elif defined(TARGET_DARWIN) || defined (TARGET_FREEBSD)
+  struct ifaliasreq      areq;
+  bzero(&areq, sizeof(areq));
+#endif
+  struct in_addr sa_addr;
+  struct in_addr sa_dstaddr;
+  struct in_addr sa_netmask;
+  int fd;
+  inet_aton(args->tun_local_ip, &sa_addr);
+  inet_aton(args->tun_netmask, &sa_netmask);
+  inet_aton(args->tun_remote_ip, &sa_dstaddr);
+
+  /* Create a channel to the NET kernel. */
+  if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+    err("socket");
+    errf("can not open socket");
+    return -1;
+  }
+#if defined(TARGET_DARWIN) || defined (TARGET_FREEBSD)
+  strncpy(areq.ifra_name, args->intf, IFNAMSIZ);
+  areq.ifra_name[IFNAMSIZ-1] = 0; /* Make sure to terminate */
+  ((struct sockaddr_in*) &areq.ifra_addr)->sin_family = AF_INET;
+  ((struct sockaddr_in*) &areq.ifra_addr)->sin_len = sizeof(areq.ifra_addr);
+  ((struct sockaddr_in*) &areq.ifra_addr)->sin_addr.s_addr = sa_addr.s_addr;
+
+  ((struct sockaddr_in*) &areq.ifra_mask)->sin_family = AF_INET;
+  ((struct sockaddr_in*) &areq.ifra_mask)->sin_len  = sizeof(areq.ifra_mask);
+  ((struct sockaddr_in*) &areq.ifra_mask)->sin_addr.s_addr = sa_netmask.s_addr;
+
+  /* For some reason FreeBSD uses ifra_broadcast for specifying dstaddr */
+  ((struct sockaddr_in*) &areq.ifra_broadaddr)->sin_family = AF_INET;
+  ((struct sockaddr_in*) &areq.ifra_broadaddr)->sin_len =
+    sizeof(areq.ifra_broadaddr);
+  ((struct sockaddr_in*) &areq.ifra_broadaddr)->sin_addr.s_addr =
+    sa_dstaddr.s_addr;
+  if (ioctl(fd, SIOCAIFADDR, (void *) &areq) < 0) {
+    err("ioctl[SIOCSIFADDR]");
+    errf("can not setup tun device: %s", args->intf);
+    close(fd);
+    return -1;
+  }
+#endif
+
+#if defined(TARGET_LINUX)
+  ifr.ifr_addr.sa_family = AF_INET;
+  ifr.ifr_dstaddr.sa_family = AF_INET;
+
+  ifr.ifr_netmask.sa_family = AF_INET;
+
+
+  strncpy(ifr.ifr_name, args->intf, IFNAMSIZ);
+  ifr.ifr_name[IFNAMSIZ-1] = 0; /* Make sure to terminate */
+
+  if (&sa_addr) { /* Set the interface address */
+    memcpy(&((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr, &sa_addr,
+      sizeof(sa_addr));
+    if (ioctl(fd, SIOCSIFADDR, (void *) &ifr) < 0) {
+      if (errno != EEXIST) {
+        err("ioctl(SIOCSIFADDR)");
+        errf("can not setup tun device: %s", args->intf);
+        close(fd);
+        return -1;
+      }
+      else {
+        err("ioctl(SIOCSIFADDR): Address already exists");
+        close(fd);
+        return -1;
+      }
+    }
+    if (&sa_dstaddr) { /* Set the destination address */
+      memcpy(&((struct sockaddr_in *) &ifr.ifr_dstaddr)->sin_addr,
+        &sa_dstaddr, sizeof(sa_dstaddr));
+      if (ioctl(fd, SIOCSIFDSTADDR, (caddr_t) &ifr) < 0) {
+        err("ioctl(SIOCSIFADDR)");
+        errf("can not setup tun device: %s", args->intf);
+        close(fd);
+        return -1;
+      }
+    }
+
+    if (&sa_netmask) { /* Set the netmask */
+      memcpy(&((struct sockaddr_in *) &ifr.ifr_netmask)->sin_addr,
+        &sa_netmask, sizeof(sa_netmask));
+
+
+      if (ioctl(fd, SIOCSIFNETMASK, (void *) &ifr) < 0) {
+          err("ioctl(SIOCSIFNETMASK)");
+          errf("can not setup tun device: %s", args->intf);
+        close(fd);
+        return -1;
+      }
+    }
+  }
+#endif
+  close(fd);
+  logf("Device %s IP(%s) up", args->intf, args->tun_local_ip);
+  return 0;
+}
+
+
 int vpn_run(vpn_ctx_t *ctx) {
   fd_set readset;
   int max_fd;
@@ -413,7 +518,7 @@ int vpn_run(vpn_ctx_t *ctx) {
   }
 
   ctx->running = 1;
-
+  ifconfig_up(ctx->args);
   shell_up(ctx->args);
 
   ctx->tun_buf = malloc(ctx->args->mtu + SHADOWVPN_ZERO_BYTES);

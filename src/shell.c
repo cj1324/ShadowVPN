@@ -29,6 +29,7 @@
 #include "shell.h"
 
 static int shell_run(shadowvpn_args_t *args, int is_up);
+static int command_run(const char *command, size_t len);
 
 int shell_up(shadowvpn_args_t *args) {
   return shell_run(args, 1);
@@ -40,8 +41,6 @@ int shell_down(shadowvpn_args_t *args) {
 
 static int shell_run(shadowvpn_args_t *args, int is_up) {
   const char *script;
-  char *buf;
-  int r;
   if (is_up) {
     script = args->up_script;
   } else {
@@ -51,20 +50,25 @@ static int shell_run(shadowvpn_args_t *args, int is_up) {
     errf("warning: script not set");
     return 0;
   }
-  buf = malloc(strlen(script) + 8);
+  return command_run(script, strlen(script));
+}
+
+static int command_run(const char *command, size_t len) {
+  char *buf;
+  int r;
+  size_t buf_len = len - (len % 4) + 16; // Optimized length, 4 * N
+  buf = malloc(buf_len);
 #ifdef TARGET_WIN32
-  sprintf(buf, "cmd /c %s", script);
+  snprintf(buf, buf_len,  "cmd /c %s", command);
 #else
-  sprintf(buf, "sh %s", script);
+  snprintf(buf, buf_len, "sh -c '%s'", command);
 #endif
-  logf("executing %s", script);
+  logf("executing %s", command);
   if (0 != (r = system(buf))) {
     free(buf);
-    errf("script %s returned non-zero return code: %d", script, r);
+    errf("script %s returned non-zero return code: %d", command, r);
     return -1;
   }
   free(buf);
   return 0;
 }
-
-

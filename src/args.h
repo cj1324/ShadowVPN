@@ -49,6 +49,9 @@ typedef struct {
   const char *pid_file;
   const char *log_file;
   const char *intf;
+  const char *tun_local_ip;
+  const char *tun_remote_ip;
+  const char *tun_netmask;
   const char *password;
   const char *server;
   uint16_t port;

@@ -165,6 +165,12 @@ static int process_key_value(shadowvpn_args_t *args, const char *key,
     args->up_script = strdup(value);
   } else if (strcmp("down", key) == 0) {
     args->down_script = strdup(value);
+  } else if (strcmp("tun_local_ip", key) == 0){
+    args->tun_local_ip = strdup(value);
+  } else if (strcmp("tun_remote_ip", key) == 0){
+    args->tun_remote_ip = strdup(value);
+  } else if (strcmp("tun_netmask", key) == 0){
+    args->tun_netmask = strdup(value);
   }
 #ifdef TARGET_WIN32
   else if (strcmp("tunip", key) == 0) {
@@ -187,6 +193,9 @@ static void load_default_args(shadowvpn_args_t *args) {
 #else
   args->intf = "tun0";
 #endif
+  args->tun_local_ip = "10.7.0.1";
+  args->tun_remote_ip = "10.7.0.1";  /* server mode equal tun_local_ip */
+  args->tun_netmask = "255.255.255.0";
   args->mtu = 1440;
   args->pid_file = "/var/run/shadowvpn.pid";
   args->log_file = "/var/log/shadowvpn.log";
