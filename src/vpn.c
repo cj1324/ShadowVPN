@@ -405,10 +405,10 @@ int vpn_ctx_init(vpn_ctx_t *ctx, shadowvpn_args_t *args) {
 }
 
 int ifconfig_up(shadowvpn_args_t *args) {
-#if defined(TARGET_LINUX)
+#if defined(TARGET_LINUX) || defined(TARGET_DARWIN)
   struct ifreq ifr;
   bzero(&ifr, sizeof(ifr));
-#elif defined(TARGET_DARWIN) || defined (TARGET_FREEBSD)
+#elif defined(TARGET_FREEBSD)
   struct ifaliasreq      areq;
   bzero(&areq, sizeof(areq));
 #endif
@@ -426,7 +426,7 @@ int ifconfig_up(shadowvpn_args_t *args) {
     errf("can not open socket");
     return -1;
   }
-#if defined(TARGET_DARWIN) || defined (TARGET_FREEBSD)
+#if defined(TARGET_FREEBSD)
   strncpy(areq.ifra_name, args->intf, IFNAMSIZ);
   areq.ifra_name[IFNAMSIZ-1] = 0; /* Make sure to terminate */
   ((struct sockaddr_in*) &areq.ifra_addr)->sin_family = AF_INET;
@@ -451,7 +451,7 @@ int ifconfig_up(shadowvpn_args_t *args) {
   }
 #endif
 
-#if defined(TARGET_LINUX)
+#if defined(TARGET_LINUX) || defined(TARGET_DARWIN)
   ifr.ifr_addr.sa_family = AF_INET;
   ifr.ifr_dstaddr.sa_family = AF_INET;
 
@@ -494,11 +494,25 @@ int ifconfig_up(shadowvpn_args_t *args) {
 
 
       if (ioctl(fd, SIOCSIFNETMASK, (void *) &ifr) < 0) {
-          err("ioctl(SIOCSIFNETMASK)");
-          errf("can not setup tun device: %s", args->intf);
+        err("ioctl(SIOCSIFNETMASK)");
+        errf("can not setup tun device: %s", args->intf);
         close(fd);
         return -1;
       }
+    }
+
+    if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+      ERROR("ioctl(SIOCGIFFLAGS)");
+      errf("can not setup tun device: %s", args->intf);
+      close(fd);
+      return -1;
+    }
+    ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
+    if (ioctl(fd, SIOCSIFFLAGS, &ifr) < 0) {
+      err("ioctl(SIOCSIFFLAGS)");
+      errf("can not setup tun device: %s", args->intf);
+      close(fd);
+      return -1;
     }
   }
 #endif
