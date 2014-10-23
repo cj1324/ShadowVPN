@@ -502,7 +502,7 @@ int ifconfig_up(shadowvpn_args_t *args) {
     }
 
     if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
-      ERROR("ioctl(SIOCGIFFLAGS)");
+      err("ioctl(SIOCGIFFLAGS)");
       errf("can not setup tun device: %s", args->intf);
       close(fd);
       return -1;
