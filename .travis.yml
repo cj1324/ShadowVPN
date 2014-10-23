@@ -20,4 +20,4 @@ before_script:
   - make
 
 script:
-  - ./ShadowVPN -h
+  - ./shadowvpn -h
