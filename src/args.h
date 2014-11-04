@@ -48,14 +48,17 @@ typedef struct {
   const char *conf_file;
   const char *pid_file;
   const char *log_file;
+  const char *password;
+  const char *server;
+  uint16_t port;
+
+  /* tun device info */
   const char *intf;
   const char *tun_local_ip;
   const char *tun_remote_ip;
   const char *tun_netmask;
-  const char *password;
-  const char *server;
-  uint16_t port;
   uint16_t mtu;
+
   const char *up_script;
   const char *down_script;
 #ifdef TARGET_WIN32

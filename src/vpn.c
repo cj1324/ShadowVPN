@@ -444,11 +444,12 @@ int ifconfig_up(shadowvpn_args_t *args) {
   ((struct sockaddr_in*) &areq.ifra_broadaddr)->sin_addr.s_addr =
     sa_dstaddr.s_addr;
   if (ioctl(fd, SIOCAIFADDR, (void *) &areq) < 0) {
-    err("ioctl[SIOCSIFADDR]");
+    err("ioctl(SIOCSIFADDR)");
     errf("can not setup tun device: %s", args->intf);
     close(fd);
     return -1;
   }
+ /* TODO: Add set MTU and UP flag */
 #endif
 
 #if defined(TARGET_LINUX) || defined(TARGET_DARWIN)
@@ -477,6 +478,7 @@ int ifconfig_up(shadowvpn_args_t *args) {
         return -1;
       }
     }
+
     if (&sa_dstaddr) { /* Set the destination address */
       memcpy(&((struct sockaddr_in *) &ifr.ifr_dstaddr)->sin_addr,
         &sa_dstaddr, sizeof(sa_dstaddr));
@@ -492,13 +494,20 @@ int ifconfig_up(shadowvpn_args_t *args) {
       memcpy(&((struct sockaddr_in *) &ifr.ifr_netmask)->sin_addr,
         &sa_netmask, sizeof(sa_netmask));
 
-
       if (ioctl(fd, SIOCSIFNETMASK, (void *) &ifr) < 0) {
         err("ioctl(SIOCSIFNETMASK)");
         errf("can not setup tun device: %s", args->intf);
         close(fd);
         return -1;
       }
+    }
+
+    ifr.ifr_mtu = args->mtu;
+    if(ioctl(fd, SIOCSIFMTU, (caddr_t)&ifr) < 0){
+      err("ioctl(SIOCSIFMTU)");
+      errf("can not setup tun device: %s", args->intf);
+      close(fd);
+      return -1;
     }
 
     if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
@@ -516,6 +525,7 @@ int ifconfig_up(shadowvpn_args_t *args) {
     }
   }
 #endif
+
   close(fd);
   logf("Device %s IP(%s) up", args->intf, args->tun_local_ip);
   return 0;
