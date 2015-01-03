@@ -58,7 +58,7 @@ typedef struct {
   const char *tun_remote_ip;
   const char *tun_netmask;
   uint16_t mtu;
-
+  uint16_t concurrency;
   const char *up_script;
   const char *down_script;
 #ifdef TARGET_WIN32

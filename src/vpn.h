@@ -26,16 +26,29 @@
 #ifndef VPN_H
 #define VPN_H
 
+#include <time.h>
+
 #ifdef TARGET_WIN32
 #include "win32.h"
 #else
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #endif
 #include "args.h"
 
+/* the structure to store known client addresses for the server */
+typedef struct {
+  struct sockaddr_storage addr;
+  socklen_t addrlen;
+  time_t last_recv_time;
+} addr_info_t;
+
 typedef struct {
   int running;
-  int sock;
+  int nsock;
+  int *socks;
   int tun;
   /* select() in winsock doesn't support file handler */
 #ifndef TARGET_WIN32
@@ -48,6 +61,12 @@ typedef struct {
 #endif
   unsigned char *tun_buf;
   unsigned char *udp_buf;
+
+  /* known client addrs for the server */
+  int nknown_addr;
+  addr_info_t *known_addrs;
+
+  /* the address we currently use */
   struct sockaddr_storage remote_addr;
   struct sockaddr *remote_addrp;
   socklen_t remote_addrlen;

@@ -45,6 +45,7 @@ SET (HDR
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypto.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypto_secretbox_salsa208poly1305.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/daemon.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/strategy.h
     )
 
 SET (SRC_SHADOWVPN
@@ -56,6 +57,7 @@ SET (SRC_SHADOWVPN
         ${CMAKE_CURRENT_SOURCE_DIR}/src/log.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/shell.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/vpn.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/strategy.c
     )
 
 SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
