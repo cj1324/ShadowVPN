@@ -33,7 +33,13 @@ static unsigned char key[32];
 int crypto_init() {
   if (-1 == sodium_init())
     return 1;
-  randombytes_set_implementation(&randombytes_salsa20_implementation);
+
+#ifdef TARGET_LINUX
+  randombytes_set_implementation(&randombytes_sysrandom_implementation);
+#else
+  randombytes_set_implementation(&randombytes_internal_implementation);
+#endif
+
   randombytes_stir();
   return 0;
 }
